@@ -36,6 +36,10 @@ public class DriverOfferController : ControllerBase
         return Ok(offers);
     }
 
+
+
+    
+
     [HttpPatch("{offerId:guid}/accept")]
     public async Task<IActionResult> AcceptOffer(
         Guid rideId,

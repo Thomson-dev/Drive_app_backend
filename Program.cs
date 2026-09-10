@@ -11,8 +11,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<DbConnection>();
 builder.Services.AddScoped<RideRepository>();
 builder.Services.AddScoped<DriverOfferRepository>();
+builder.Services.AddScoped<DriverProfileRepository>();
+builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<DriverOfferService>();
 builder.Services.AddScoped<RideService>();
+builder.Services.AddScoped<UserService>();
 
 var app = builder.Build();
 

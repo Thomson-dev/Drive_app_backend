@@ -73,6 +73,68 @@ public class RideController : ControllerBase
             message = "Ride cancelled successfully"
         });
     }
+
+    [HttpGet("pending")]
+    public async Task<IActionResult> GetPendingRides([FromQuery] Guid driverId)
+    {
+        try
+        {
+            var rides =
+                await _rideService.GetPendingRidesForDriverAsync(driverId);
+
+            return Ok(rides);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+    [HttpPatch("{rideId:guid}/start")]
+    public async Task<IActionResult> StartRide(
+        Guid rideId,
+        Guid driverId)
+    {
+        var started = await _rideService.StartRideAsync(rideId, driverId);
+
+        if (!started)
+        {
+            return BadRequest(new
+            {
+                message = "Ride cannot be started."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Ride started successfully"
+        });
+    }
+
+    [HttpPatch("{rideId:guid}/complete")]
+    public async Task<IActionResult> CompleteRide(
+        Guid rideId,
+        Guid driverId)
+    {
+        var completed =
+            await _rideService.CompleteRideAsync(rideId, driverId);
+
+        if (!completed)
+        {
+            return BadRequest(new
+            {
+                message = "Ride cannot be completed."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Ride completed successfully"
+        });
+    }
 }
 
 
