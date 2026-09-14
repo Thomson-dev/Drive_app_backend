@@ -29,7 +29,7 @@ public class DriverProfileService
 
     public async Task<DriverProfile?> GetDriverProfileByUserIdAsync(Guid userId)
     {
-        return await _driverProfileRepository.GetProfileByUserIdAsync(userId);
+        return await _driverProfileRepository.GetDriverProfileByUserIdAsync(userId);
     }
 
     public async Task<bool> UpdateStatusAsync(Guid id, string status)

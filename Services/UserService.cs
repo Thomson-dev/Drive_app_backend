@@ -13,6 +13,12 @@ public class UserService
         string password,
         string role)
     {
+        if (role != "Passenger" && role != "Driver")
+        {
+            throw new ArgumentException(
+                "Role must be Passenger or Driver.");
+        }
+
         var passwordHash =
             BCrypt.Net.BCrypt.HashPassword(password);
 

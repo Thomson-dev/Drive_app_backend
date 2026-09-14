@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -12,13 +14,22 @@ public class DriverProfileController : ControllerBase
         _driverProfileService = driverProfileService;
     }
 
+    [Authorize(Roles = "Driver")]
     [HttpPost]
     public async Task<IActionResult> CreateDriverProfile(
         CreateDriverProfileRequest request)
     {
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
         var driverId =
             await _driverProfileService.CreateDriverProfileAsync(
-                request.UserId,
+                userId,
                 request.LicenseNumber,
                 request.VehicleMake,
                 request.VehicleModel,
@@ -36,6 +47,7 @@ public class DriverProfileController : ControllerBase
         );
     }
 
+    [Authorize]
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetDriverProfile(Guid id)
     {
@@ -48,11 +60,23 @@ public class DriverProfileController : ControllerBase
         return Ok(driver);
     }
 
+    [Authorize(Roles = "Driver")]
     [HttpPatch("{id:guid}/status")]
     public async Task<IActionResult> UpdateDriverStatus(
         Guid id,
         [FromBody] string status)
     {
+        var driverId = await GetAuthenticatedDriverIdAsync();
+        if (driverId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (driverId.Value != id)
+        {
+            return Forbid();
+        }
+
         try
         {
             var updated =
@@ -77,11 +101,23 @@ public class DriverProfileController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Driver")]
     [HttpPatch("{id:guid}/location")]
     public async Task<IActionResult> UpdateDriverLocation(
         Guid id,
         UpdateDriverLocationRequest request)
     {
+        var driverId = await GetAuthenticatedDriverIdAsync();
+        if (driverId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (driverId.Value != id)
+        {
+            return Forbid();
+        }
+
         try
         {
             var updated =
@@ -105,6 +141,23 @@ public class DriverProfileController : ControllerBase
                 message = ex.Message
             });
         }
+    }
+
+    private async Task<Guid?> GetAuthenticatedDriverIdAsync()
+    {
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return null;
+        }
+
+        var driver =
+            await _driverProfileService
+                .GetDriverProfileByUserIdAsync(userId);
+
+        return driver?.Id;
     }
 }
 

@@ -1,4 +1,6 @@
 
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -6,20 +8,31 @@ using Microsoft.AspNetCore.Mvc;
 public class RideController : ControllerBase
 {
     private readonly RideService _rideService;
+    private readonly DriverProfileService _driverProfileService;
 
-    public RideController(RideService rideService)
+    public RideController(
+        RideService rideService,
+        DriverProfileService driverProfileService)
     {
         _rideService = rideService;
+        _driverProfileService = driverProfileService;
     }
 
 
+    [Authorize(Roles = "Passenger")]
     [HttpPost]
     public async Task<IActionResult> CreateRide(CreateRideRequest request)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdClaim, out var passengerId))
+        {
+            return Unauthorized();
+        }
+
         try
         {
             var rideId = await _rideService.CreateRideAsync(
-                request.PassengerId,
+                passengerId,
                 request.PickupLatitude,
                 request.PickupLongitude,
                 request.DestinationLatitude,
@@ -49,6 +62,7 @@ public class RideController : ControllerBase
         }
     }
 
+    [Authorize]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetRide(Guid id)
     {
@@ -60,9 +74,28 @@ public class RideController : ControllerBase
         return Ok(ride);
     }
 
+    [Authorize(Roles = "Passenger")]
     [HttpPatch("{id}/cancel")]
     public async Task<IActionResult> CancelRide(Guid id)
     {
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var passengerId))
+        {
+            return Unauthorized();
+        }
+
+        var ownsRide =
+            await _rideService.IsRideOwnedByPassengerAsync(
+                id,
+                passengerId);
+
+        if (!ownsRide)
+        {
+            return Forbid();
+        }
+
         var isCancelled = await _rideService.CancelRideAsync(id);
         if (!isCancelled)
         {
@@ -74,13 +107,34 @@ public class RideController : ControllerBase
         });
     }
 
+    [Authorize(Roles = "Driver")]
     [HttpGet("pending")]
-    public async Task<IActionResult> GetPendingRides([FromQuery] Guid driverId)
+    public async Task<IActionResult> GetPendingRides()
     {
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var driver =
+            await _driverProfileService
+                .GetDriverProfileByUserIdAsync(userId);
+
+        if (driver is null)
+        {
+            return NotFound(new
+            {
+                message = "Driver profile not found."
+            });
+        }
+
         try
         {
             var rides =
-                await _rideService.GetPendingRidesForDriverAsync(driverId);
+                await _rideService.GetPendingRidesForDriverAsync(driver.Id);
 
             return Ok(rides);
         }
@@ -93,12 +147,31 @@ public class RideController : ControllerBase
         }
     }
 
+    [Authorize(Roles = "Driver")]
     [HttpPatch("{rideId:guid}/start")]
-    public async Task<IActionResult> StartRide(
-        Guid rideId,
-        Guid driverId)
+    public async Task<IActionResult> StartRide(Guid rideId)
     {
-        var started = await _rideService.StartRideAsync(rideId, driverId);
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var driver =
+            await _driverProfileService
+                .GetDriverProfileByUserIdAsync(userId);
+
+        if (driver is null)
+        {
+            return NotFound(new
+            {
+                message = "Driver profile not found."
+            });
+        }
+
+        var started = await _rideService.StartRideAsync(rideId, driver.Id);
 
         if (!started)
         {
@@ -114,13 +187,32 @@ public class RideController : ControllerBase
         });
     }
 
+    [Authorize(Roles = "Driver")]
     [HttpPatch("{rideId:guid}/complete")]
-    public async Task<IActionResult> CompleteRide(
-        Guid rideId,
-        Guid driverId)
+    public async Task<IActionResult> CompleteRide(Guid rideId)
     {
+        var userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var driver =
+            await _driverProfileService
+                .GetDriverProfileByUserIdAsync(userId);
+
+        if (driver is null)
+        {
+            return NotFound(new
+            {
+                message = "Driver profile not found."
+            });
+        }
+
         var completed =
-            await _rideService.CompleteRideAsync(rideId, driverId);
+            await _rideService.CompleteRideAsync(rideId, driver.Id);
 
         if (!completed)
         {

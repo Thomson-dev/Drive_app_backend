@@ -5,10 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 public class AuthController : ControllerBase
 {
     private readonly UserService _userService;
+    private readonly JwtService _jwtService;
 
-    public AuthController(UserService userService)
+    public AuthController(UserService userService, JwtService jwtService)
     {
         _userService = userService;
+        _jwtService = jwtService;
     }
 
     [HttpPost("register")]
@@ -49,7 +51,8 @@ public class AuthController : ControllerBase
             id = user.Id,
             fullName = user.FullName,
             email = user.Email,
-            role = user.Role
+            role = user.Role,
+            token = _jwtService.GenerateToken(user)
         });
     }
 }

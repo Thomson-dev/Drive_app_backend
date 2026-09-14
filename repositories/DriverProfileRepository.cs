@@ -71,7 +71,7 @@ public class DriverProfileRepository
     /// </summary>
     /// <param name="userId">The user ID of the driver.</param>
     /// <returns>The DriverProfile entity if found; null otherwise.</returns>
-    public async Task<DriverProfile?> GetProfileByUserIdAsync(Guid userId)
+    public async Task<DriverProfile?> GetDriverProfileByUserIdAsync(Guid userId)
     {
         const string sql = """
             SELECT
@@ -81,7 +81,9 @@ public class DriverProfileRepository
                 vehicle_make,
                 vehicle_model,
                 vehicle_plate_number,
-                status
+                status,
+                current_latitude,
+                current_longitude
             FROM driver_profiles
             WHERE user_id = @userId;
             """;
@@ -103,7 +105,13 @@ public class DriverProfileRepository
                 VehicleMake = reader.GetString(3),
                 VehicleModel = reader.GetString(4),
                 VehiclePlateNumber = reader.GetString(5),
-                Status = reader.GetString(6)
+                Status = reader.GetString(6),
+                CurrentLatitude = reader.IsDBNull(7)
+                    ? null
+                    : reader.GetDouble(7),
+                CurrentLongitude = reader.IsDBNull(8)
+                    ? null
+                    : reader.GetDouble(8)
             };
         }
 

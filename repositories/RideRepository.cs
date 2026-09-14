@@ -125,6 +125,30 @@ public class RideRepository
         };
     }
 
+    public async Task<bool> IsRideOwnedByPassengerAsync(
+        Guid rideId,
+        Guid passengerId)
+    {
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM rides
+                WHERE id = @rideId
+                  AND passenger_id = @passengerId
+            );
+            """;
+
+        await using var connection = _dbConnection.CreateConnection();
+        await connection.OpenAsync();
+
+        await using var command = new NpgsqlCommand(sql, connection);
+
+        command.Parameters.AddWithValue("rideId", rideId);
+        command.Parameters.AddWithValue("passengerId", passengerId);
+
+        return (bool)(await command.ExecuteScalarAsync())!;
+    }
+
     /// <summary>
     /// Cancels a ride if it is currently pending or accepted.
     /// </summary>

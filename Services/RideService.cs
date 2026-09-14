@@ -30,6 +30,15 @@ public async Task<Ride?> GetRideByIdAsync(Guid id)
     return await _rideRepository.GetRideByIdAsync(id);
 }
 
+public async Task<bool> IsRideOwnedByPassengerAsync(
+    Guid rideId,
+    Guid passengerId)
+{
+    return await _rideRepository.IsRideOwnedByPassengerAsync(
+        rideId,
+        passengerId);
+}
+
 
 public async Task<bool> CancelRideAsync(Guid id)
 {

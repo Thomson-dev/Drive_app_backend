@@ -2,9 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 public class CreateRideRequest
 {
-    [Required]
-    public Guid PassengerId { get; set; }
-
     [Range(-90, 90)]
     public double PickupLatitude { get; set; }
 
