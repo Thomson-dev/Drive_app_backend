@@ -200,7 +200,7 @@ public class DriverOfferRepository
             const string rideStatusSql = """
                 SELECT status
                 FROM rides
-                WHERE id = @rideId;
+                WHERE id = @rideId
                 FOR UPDATE;
                 """;
 

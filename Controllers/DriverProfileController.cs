@@ -7,11 +7,14 @@ using Microsoft.AspNetCore.Mvc;
 public class DriverProfileController : ControllerBase
 {
     private readonly DriverProfileService _driverProfileService;
+    private readonly DriverLocationService _driverLocationService;
 
     public DriverProfileController(
-        DriverProfileService driverProfileService)
+        DriverProfileService driverProfileService,
+        DriverLocationService driverLocationService)
     {
         _driverProfileService = driverProfileService;
+        _driverLocationService = driverLocationService;
     }
 
     [Authorize(Roles = "Driver")]
@@ -66,13 +69,7 @@ public class DriverProfileController : ControllerBase
         Guid id,
         [FromBody] string status)
     {
-        var driverId = await GetAuthenticatedDriverIdAsync();
-        if (driverId is null)
-        {
-            return Unauthorized();
-        }
-
-        if (driverId.Value != id)
+        if (!await IsDriverProfileOwnerAsync(id))
         {
             return Forbid();
         }
@@ -101,19 +98,38 @@ public class DriverProfileController : ControllerBase
         }
     }
 
+    [Authorize]
+    [HttpGet("nearby")]
+    public async Task<IActionResult> GetNearbyDrivers(
+        [FromQuery] double latitude,
+        [FromQuery] double longitude,
+        [FromQuery] double radiusKm = 5)
+    {
+        try
+        {
+            var drivers = await _driverLocationService.FindNearbyDriversAsync(
+                latitude,
+                longitude,
+                radiusKm);
+
+            return Ok(drivers);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
     [Authorize(Roles = "Driver")]
     [HttpPatch("{id:guid}/location")]
     public async Task<IActionResult> UpdateDriverLocation(
         Guid id,
         UpdateDriverLocationRequest request)
     {
-        var driverId = await GetAuthenticatedDriverIdAsync();
-        if (driverId is null)
-        {
-            return Unauthorized();
-        }
-
-        if (driverId.Value != id)
+        if (!await IsDriverProfileOwnerAsync(id))
         {
             return Forbid();
         }
@@ -129,6 +145,11 @@ public class DriverProfileController : ControllerBase
             if (!updated)
                 return NotFound();
 
+            await _driverLocationService.SetDriverLocationAsync(
+                id,
+                request.Latitude,
+                request.Longitude);
+
             return Ok(new
             {
                 message = "Driver location updated successfully"
@@ -143,21 +164,21 @@ public class DriverProfileController : ControllerBase
         }
     }
 
-    private async Task<Guid?> GetAuthenticatedDriverIdAsync()
+    private async Task<bool> IsDriverProfileOwnerAsync(Guid driverProfileId)
     {
         var userIdClaim =
             User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (!Guid.TryParse(userIdClaim, out var userId))
         {
-            return null;
+            return false;
         }
 
-        var driver =
+        var driverProfile =
             await _driverProfileService
-                .GetDriverProfileByUserIdAsync(userId);
+                .GetDriverProfileByIdAsync(driverProfileId);
 
-        return driver?.Id;
+        return driverProfile?.UserId == userId;
     }
 }
 

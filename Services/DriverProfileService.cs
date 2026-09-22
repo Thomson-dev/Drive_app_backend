@@ -41,7 +41,10 @@ public class DriverProfileService
         Guid driverId,
         string status)
     {
-        if (status != "Online" && status != "Offline")
+        status = status?.Trim() ?? string.Empty;
+
+        if (!string.Equals(status, "Online", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(status, "Offline", StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException(
                 "Status must be Online or Offline.");
@@ -49,7 +52,9 @@ public class DriverProfileService
 
         return await _driverProfileRepository.UpdateDriverStatusAsync(
             driverId,
-            status);
+            status.Equals("Online", StringComparison.OrdinalIgnoreCase)
+                ? "Online"
+                : "Offline");
     }
 
     public async Task<bool> UpdateDriverLocationAsync(

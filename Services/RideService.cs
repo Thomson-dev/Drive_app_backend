@@ -52,10 +52,14 @@ public async Task<List<Ride>> GetPendingRidesAsync()
 
 public async Task<List<Ride>> GetPendingRidesForDriverAsync(Guid driverId)
 {
-    var driverIsOnline =
-        await _driverProfileRepository.IsDriverOnlineAsync(driverId);
+    var driver =
+        await _driverProfileRepository.GetProfileByIdAsync(driverId);
 
-    if (!driverIsOnline)
+    if (driver is null ||
+        !string.Equals(
+            driver.Status?.Trim(),
+            "Online",
+            StringComparison.OrdinalIgnoreCase))
     {
         throw new ArgumentException(
             "Driver must be online to view available rides.");

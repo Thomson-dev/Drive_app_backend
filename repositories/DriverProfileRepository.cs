@@ -85,7 +85,10 @@ public class DriverProfileRepository
                 current_latitude,
                 current_longitude
             FROM driver_profiles
-            WHERE user_id = @userId;
+            WHERE user_id = @userId
+            ORDER BY
+                CASE WHEN status ILIKE 'online' THEN 0 ELSE 1 END,
+                id;
             """;
 
         await using var connection = _dbConnection.CreateConnection();

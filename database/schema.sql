@@ -1,3 +1,15 @@
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS full_name VARCHAR(255) NOT NULL DEFAULT '';
+
 CREATE TABLE IF NOT EXISTS rides (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     passenger_id UUID NOT NULL,
@@ -32,11 +44,6 @@ CREATE TABLE IF NOT EXISTS driver_profiles (
 );
 
 ALTER TABLE driver_profiles
-ADD COLUMN current_latitude DOUBLE PRECISION,
-ADD COLUMN current_longitude DOUBLE PRECISION;
-
-ALTER TABLE driver_offers
-ADD CONSTRAINT unique_driver_ride_offer
-UNIQUE (ride_id, driver_id);
-
+ADD COLUMN IF NOT EXISTS current_latitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS current_longitude DOUBLE PRECISION;
 

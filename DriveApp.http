@@ -1,0 +1,181 @@
+@baseUrl = http://localhost:5000
+
+### ===================================================================
+### 1. AUTHENTICATION ENDPOINTS
+### ===================================================================
+
+### 1.1 Register Passenger
+# @name registerPassenger
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Alice Passenger",
+  "email": "alice@example.com",
+  "password": "Password123!",
+  "role": "Passenger"
+}
+
+### 1.2 Login Passenger
+# @name loginPassenger
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "password": "Password123!"
+}
+
+### Store Passenger Token
+@passengerToken = {{loginPassenger.response.body.token}}
+
+### 1.3 Register Driver
+# @name registerDriver
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Bob Driver",
+  "email": "bob@example.com",
+  "password": "Password123!",
+  "role": "Driver"
+}
+
+### 1.4 Login Driver
+# @name loginDriver
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "bob@example.com",
+  "password": "Password123!"
+}
+
+### Store Driver Token
+@driverToken = {{loginDriver.response.body.token}}
+
+
+### ===================================================================
+### 2. DRIVER PROFILE ENDPOINTS
+### ===================================================================
+
+### 2.1 Create Driver Profile
+# @name createDriverProfile
+POST {{baseUrl}}/drivers
+Authorization: Bearer {{driverToken}}
+Content-Type: application/json
+
+{
+  "licenseNumber": "DL-987654321",
+  "vehicleMake": "Toyota",
+  "vehicleModel": "Corolla",
+  "vehiclePlateNumber": "LAG-123-XY"
+}
+
+### Store Driver Profile ID
+@driverProfileId = {{createDriverProfile.response.body.id}}
+
+### 2.2 Get Driver Profile By ID
+GET {{baseUrl}}/drivers/{{driverProfileId}}
+Authorization: Bearer {{driverToken}}
+
+### 2.3 Set Driver Status to "Online" (Required to view rides and receive offers)
+PATCH {{baseUrl}}/drivers/{{driverProfileId}}/status
+Authorization: Bearer {{driverToken}}
+Content-Type: application/json
+
+"Online"
+
+### 2.4 Update Driver Location
+PATCH {{baseUrl}}/drivers/{{driverProfileId}}/location
+Authorization: Bearer {{driverToken}}
+Content-Type: application/json
+
+{
+  "latitude": 6.5244,
+  "longitude": 3.3792
+}
+
+### 2.5 Find nearby drivers
+GET {{baseUrl}}/drivers/nearby?latitude=6.5244&longitude=3.3792&radiusKm=5
+Authorization: Bearer {{passengerToken}}
+
+
+### ===================================================================
+### 3. RIDE REQUEST ENDPOINTS
+### ===================================================================
+
+### 3.1 Create Ride (Passenger)
+# @name createRide
+POST {{baseUrl}}/rides
+Authorization: Bearer {{passengerToken}}
+Content-Type: application/json
+
+{
+  "pickupLatitude": 6.5244,
+  "pickupLongitude": 3.3792,
+  "destinationLatitude": 6.6018,
+  "destinationLongitude": 3.3515,
+  "proposedFare": 2500,
+  "rideType": "Standard"
+}
+
+### Store Ride ID
+@rideId = {{createRide.response.body.id}}
+
+### 3.2 Get Ride Details
+GET {{baseUrl}}/rides/{{rideId}}
+Authorization: Bearer {{passengerToken}}
+
+### 3.3 Driver Views Pending Rides
+GET {{baseUrl}}/rides/pending
+Authorization: Bearer {{driverToken}}
+
+
+### ===================================================================
+### 4. DRIVER OFFER / COUNTER-OFFER FLOW
+### ===================================================================
+
+### 4.1 Driver Creates an Offer for the Ride
+# @name createOffer
+POST {{baseUrl}}/rides/{{rideId}}/offers
+Authorization: Bearer {{driverToken}}
+Content-Type: application/json
+
+{
+  "offeredFare": 2800
+}
+
+### Store Offer ID
+@offerId = {{createOffer.response.body.id}}
+
+### 4.2 Passenger Views Offers for their Ride
+GET {{baseUrl}}/rides/{{rideId}}/offers
+Authorization: Bearer {{passengerToken}}
+
+### 4.3 Passenger Accepts Driver's Offer
+PATCH {{baseUrl}}/rides/{{rideId}}/offers/{{offerId}}/accept
+Authorization: Bearer {{passengerToken}}
+
+
+### ===================================================================
+### 5. RIDE TRIP EXECUTION
+### ===================================================================
+
+### 5.1 Driver Starts the Ride (Ride status becomes InProgress)
+PATCH {{baseUrl}}/rides/{{rideId}}/start
+Authorization: Bearer {{driverToken}}
+
+### 5.2 Driver Completes the Ride (Ride status becomes Completed)
+PATCH {{baseUrl}}/rides/{{rideId}}/complete
+Authorization: Bearer {{driverToken}}
+
+
+### ===================================================================
+### 6. CANCELLATION (Alternative test scenario)
+### ===================================================================
+
+### 6.1 Passenger Cancels Ride
+# Note: Can only cancel if status is 'Pending' or 'Accepted'
+# PATCH {{baseUrl}}/rides/{{rideId}}/cancel
+# Authorization: Bearer {{passengerToken}}
